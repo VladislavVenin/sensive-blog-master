@@ -52,7 +52,7 @@ def index(request):
             .prefetch_related('author', 'tags')[:5] \
             .fetch_with_comments_count()
 
-    fresh_posts = Post.objects.prefetch_related("author")\
+    fresh_posts = Post.objects.prefetch_related("author", 'tags')\
         .annotate(Count("comments"))\
         .order_by('published_at')
     most_fresh_posts = list(fresh_posts)[-5:]
