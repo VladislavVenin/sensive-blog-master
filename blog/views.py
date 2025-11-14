@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from django.db.models import Count
+from django.db.models import Count, Prefetch
 from django.shortcuts import get_object_or_404
 from blog.models import Post, Tag
 
@@ -36,10 +36,12 @@ def serialize_tag(tag):
 def index(request):
 
     most_popular_posts = Post.objects.popular() \
-            .prefetch_related('author', 'tags')[:5] \
+            .select_related('author')\
+            .prefetch_related('tags')[:5] \
             .fetch_with_comments_count()
 
-    fresh_posts = Post.objects.prefetch_related("author", 'tags')\
+    fresh_posts = Post.objects.prefetch_related('tags')\
+        .select_related('author')\
         .annotate(Count("comments"))\
         .order_by('published_at')
     most_fresh_posts = list(fresh_posts)[-5:]
@@ -58,7 +60,7 @@ def index(request):
 
 def post_detail(request, slug):
     post = get_object_or_404(Post.objects.annotate(Count('likes'), Count('comments')), slug=slug)
-    comments = post.comments.prefetch_related('author')
+    comments = post.comments.select_related('author')
     serialized_comments = []
     for comment in comments:
         serialized_comments.append({
@@ -86,7 +88,8 @@ def post_detail(request, slug):
     most_popular_tags = Tag.objects.popular()[:5]
 
     most_popular_posts = Post.objects.popular() \
-        .prefetch_related('author', 'tags')[:5] \
+        .prefetch_related('tags') \
+        .select_related('author')[:5]\
         .fetch_with_comments_count()
 
     context = {
@@ -105,10 +108,11 @@ def tag_filter(request, tag_title):
     most_popular_tags = Tag.objects.popular()[:5]
 
     most_popular_posts = Post.objects.popular() \
-        .prefetch_related('author', 'tags')[:5] \
+        .prefetch_related('tags') \
+        .select_related('author')[:5]\
         .fetch_with_comments_count()
 
-    related_posts = tag.posts.prefetch_related('tags', 'author').annotate(Count('comments')).all()[:20]
+    related_posts = tag.posts.prefetch_related('tags').select_related('author').annotate(Count('comments')).all()[:20]
 
     context = {
         'tag': tag.title,
