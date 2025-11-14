@@ -18,12 +18,14 @@ class PostQuerySet(models.QuerySet):
         return popular_posts
 
     def fetch_with_comments_count(self):
-        most_popular_posts_ids = [post.id for post in self]
-        posts_with_comments = Post.objects.filter(id__in=most_popular_posts_ids).annotate(Count('comments'))
-        ids_and_comments = posts_with_comments.values_list('id', 'comments__count')
-        count_for_id = dict(ids_and_comments)
+        counts = dict(
+            Post.objects \
+                .filter(id__in=[p.id for p in self]) \
+                .annotate(Count('comments')) \
+                .values_list('id', 'comments__count')
+        )
         for post in self:
-            post.comments__count = count_for_id[post.id]
+            post.comments__count = counts[post.id]
         return self
 
 
